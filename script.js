@@ -120,9 +120,10 @@ async function analyzeExpenses() {
     const res = await fetch("http://localhost:5000/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ expenses: rows.map(e => ({
-        desc: e.desc, amount: e.amt, category: e.cat, date: e.date
-      })) })
+      body: JSON.stringify({ 
+        expenses: rows.map(e => ({ desc: e.desc, amount: e.amt, category: e.cat, date: e.date })),
+        rules: customRules
+      })
     });
     
     const result = await res.json();
@@ -300,3 +301,97 @@ function showToast(msg){
 addRow('Netflix','649','Subscriptions');
 addRow('Swiggy Dinner','480','Food');
 addRow('Electricity Bill','2100','Utilities');
+
+/* ── Custom Rules Engine ── */
+let customRules = [];
+
+function addCustomRule() {
+  const name = document.getElementById('ruleName').value;
+  const cat = document.getElementById('ruleCat').value;
+  const pct = parseFloat(document.getElementById('rulePct').value);
+  const min = parseFloat(document.getElementById('ruleMin').value);
+  const sev = document.getElementById('ruleSev').value;
+
+  if(!name || !pct || !min) {
+    showToast("Please fill in Rule Name, Max %, and Min Amount");
+    return;
+  }
+
+  customRules.push({ name, category: cat, max_pct: pct, min_amount: min, severity: sev });
+  
+  // Clear inputs
+  document.getElementById('ruleName').value = '';
+  document.getElementById('rulePct').value = '';
+  document.getElementById('ruleMin').value = '';
+
+  renderRules();
+  showToast("Custom rule added!");
+}
+
+function removeRule(index) {
+  customRules.splice(index, 1);
+  renderRules();
+}
+
+function renderRules() {
+  const container = document.getElementById('activeRulesList');
+  if(customRules.length === 0) {
+    container.innerHTML = `<div style="color:var(--muted); font-size:12px; margin-top:16px;">Using AI Default Rules. Add a rule above to override.</div>`;
+    return;
+  }
+
+  container.innerHTML = customRules.map((r, i) => `
+    <div class="active-rule-item">
+      <div><strong>${r.name}</strong> • ${r.category} > ${r.max_pct}% AND > ₹${r.min_amount} (${r.severity})</div>
+      <button onclick="removeRule(${i})" style="background:none; border:none; color:var(--accent2); cursor:pointer;">✕</button>
+    </div>
+  `).join('');
+}
+
+// Initialize empty rules display
+renderRules();
+
+function toggleDropdown() {
+  document.getElementById('dropdownOptions').classList.toggle('show');
+}
+
+function selectSeverity(value, text) {
+  // Update the hidden input value
+  document.getElementById('ruleSev').value = value;
+  // Update the displayed text
+  document.querySelector('.dropdown-selected').innerText = text;
+  // Close the dropdown
+  document.getElementById('dropdownOptions').classList.remove('show');
+}
+
+// Close dropdown if clicked outside
+window.onclick = function(event) {
+  if (!event.target.matches('.dropdown-selected')) {
+    const dropdowns = document.getElementsByClassName("dropdown-options");
+    for (let i = 0; i < dropdowns.length; i++) {
+      dropdowns[i].classList.remove('show');
+    }
+  }
+}
+/* ── Custom Dropdown Logic ── */
+function toggleDropdown(menuId, event) {
+  event.stopPropagation(); // Prevent immediate closing
+  // Close all other dropdowns first
+  document.querySelectorAll('.dropdown-options').forEach(menu => {
+    if (menu.id !== menuId) menu.classList.remove('show');
+  });
+  // Toggle the clicked one
+  document.getElementById(menuId).classList.toggle('show');
+}
+
+function setOption(inputId, displayId, value, text = null) {
+  document.getElementById(inputId).value = value;
+  document.getElementById(displayId).innerText = text || value;
+}
+
+// Close dropdowns if the user clicks anywhere else on the screen
+window.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-options').forEach(menu => {
+    menu.classList.remove('show');
+  });
+});

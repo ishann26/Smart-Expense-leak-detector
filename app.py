@@ -29,35 +29,17 @@ def health():
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    """
-    Expected JSON body:
-    {
-      "expenses": [
-        { "desc": "Netflix", "amount": 649, "category": "Subscriptions", "date": "2025-04-01" },
-        ...
-      ]
-    }
-
-    Returns:
-    {
-      "total": 18000,
-      "category_totals": { "Food": 4500, ... },
-      "spend_clusters": [["Food", "Subscriptions"], ...],
-      "leaks": [ { "rank":1, "name":"...", "severity":"high", ... }, ... ],
-      "health": { "score":62, "grade":"C", "verdict":"...", "total_savings":3200 },
-      "recommendations": [ { "title":"...", "desc":"...", "saving":"..." }, ... ]
-    }
-    """
     data = request.get_json(silent=True)
 
     if not data or "expenses" not in data:
         return jsonify({"error": "Send JSON with key 'expenses'"}), 400
 
-    raw = data["expenses"]
+    raw_expenses = data["expenses"]
+    raw_rules = data.get("rules", []) # Fetch custom rules if they exist
 
-    # Normalise + validate
+    # Normalise + validate expenses
     expenses = []
-    for row in raw:
+    for row in raw_expenses:
         try:
             expenses.append({
                 "desc": str(row.get("desc", "")),
@@ -66,13 +48,14 @@ def analyze():
                 "date": str(row.get("date", "")),
             })
         except (ValueError, TypeError):
-            continue   # skip malformed rows
+            continue
 
     expenses = [e for e in expenses if e["desc"] and e["amount"] > 0]
     if len(expenses) < 2:
         return jsonify({"error": "Add at least 2 valid expenses"}), 422
 
-    result = ai_engine.analyze(expenses)
+    # Pass BOTH expenses and rules to the engine
+    result = ai_engine.analyze(expenses, custom_rules=raw_rules)
     return jsonify(result)
 
 

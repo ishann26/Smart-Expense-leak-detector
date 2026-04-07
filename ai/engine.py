@@ -21,12 +21,10 @@ class ExpenseAI:
         self.csp_solver = CSPSolver()
         self.prioritizer = AStarPrioritizer()
 
-    def analyze(self, expenses: list[dict]) -> dict:
+    def analyze(self, expenses: list[dict], custom_rules: list[dict] = None) -> dict:
         """
-        expenses: list of dicts with keys:
-          { "desc": str, "amount": float, "category": str, "date": str }
-
-        Returns a full analysis dict ready to be JSON-serialised.
+        expenses: list of dicts with keys: { "desc": str, "amount": float, "category": str, "date": str }
+        custom_rules: optional list of dicts with keys: { "name": str, "category": str, "max_pct": float, "min_amount": float, "severity": str }
         """
         if not expenses:
             return {"error": "No expense data provided"}
@@ -34,6 +32,23 @@ class ExpenseAI:
         total = sum(e["amount"] for e in expenses)
         if total == 0:
             return {"error": "All amounts are zero"}
+
+        # ── Setup Dynamic Rules ──────────────────────────────────────────
+        if custom_rules:
+            from ai.csp_solver import Constraint
+            constraints = []
+            for r in custom_rules:
+                constraints.append(Constraint(
+                    name=r.get("name", "Custom Rule"),
+                    category=r.get("category", "Others"),
+                    max_pct=float(r.get("max_pct", 10)) / 100.0, # Convert 15% to 0.15
+                    min_amount=float(r.get("min_amount", 0)),
+                    severity=r.get("severity", "med"),
+                    tip="You broke your custom budget rule!"
+                ))
+            self.csp_solver = CSPSolver(constraints)
+        else:
+            self.csp_solver = CSPSolver() # Revert to defaults if no custom rules
 
         # ── Layer 1: BFS/DFS ─────────────────────────────────────────────
         graph = ExpenseGraph().build(expenses)
