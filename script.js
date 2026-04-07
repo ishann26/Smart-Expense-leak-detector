@@ -103,20 +103,27 @@ function handleCSV(input){
   reader.readAsText(file);
 }
 
-/* ── ANALYSIS ENGINE (Python logic ported to JS) ── */
+/* ── FIX 1: analyzeExpenses now runs locally — no backend needed ── */
 async function analyzeExpenses() {
   const rows = expenses.filter(e => e.desc && e.amt > 0);
-  const res = await fetch("http://localhost:5000/analyze", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ expenses: rows.map(e => ({
-      desc: e.desc, amount: e.amt, category: e.cat, date: e.date
-    })) })
-  });
-  const result = await res.json();
-  renderResults(result);  // your existing render function works as-is
+  if (rows.length === 0) {
+    showToast('Add at least one expense first!');
+    return;
+  }
+
+  // Show loading overlay
+  document.getElementById('loadingOverlay').style.display = 'flex';
+
+  // Small delay so the loader is visible
+  setTimeout(() => {
+    const result = runLeakDetector(rows);
+    document.getElementById('loadingOverlay').style.display = 'none';
+    renderResults(result);
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+  }, 800);
 }
 
+/* ── ANALYSIS ENGINE ── */
 function runLeakDetector(rows){
   const total = rows.reduce((s,e)=>s+e.amt,0);
 
@@ -126,7 +133,6 @@ function runLeakDetector(rows){
     catTotals[e.cat] = (catTotals[e.cat]||0) + e.amt;
   });
 
-  // Detect leaks
   const leaks = [];
 
   // 1. Subscription creep
@@ -171,16 +177,16 @@ function runLeakDetector(rows){
     });
   }
 
-  // 4. Transport redundancy
+  // 4. FIX 2: Transport — lowered threshold to catch single large entries
   const trans = rows.filter(e=>e.cat==='Transport');
   const transTotal = trans.reduce((s,e)=>s+e.amt,0);
-  if(trans.length>=3 && transTotal>1000){
+  if(trans.length >= 1 && transTotal > 2000){
     leaks.push({
       name:'Transport Waste',
       severity:'med',
       amount:transTotal,
       saving:Math.round(transTotal*0.3),
-      tip:`Multiple transport entries detected. Consider carpooling, monthly pass, or WFH days to reduce ₹${Math.round(transTotal*0.3).toLocaleString('en-IN')}/month.`,
+      tip:`Transport spend is ₹${transTotal.toLocaleString('en-IN')}. Consider carpooling, monthly pass, or WFH days to reduce costs by ₹${Math.round(transTotal*0.3).toLocaleString('en-IN')}/month.`,
       items:trans.map(t=>t.desc)
     });
   }
@@ -213,6 +219,20 @@ function runLeakDetector(rows){
     });
   }
 
+  // 7. FIX 3: Single category dominance (catches ₹10,000 petrol etc.)
+  Object.entries(catTotals).forEach(([cat, amt]) => {
+    if(amt / total > 0.4 && !leaks.find(l => l.name.toLowerCase().includes(cat.toLowerCase()))) {
+      leaks.push({
+        name: `${cat} Overspend`,
+        severity: 'high',
+        amount: amt,
+        saving: Math.round(amt * 0.3),
+        tip: `${cat} takes up ${Math.round(amt/total*100)}% of your total budget — well above healthy limits. Review individual entries and identify what can be reduced or eliminated.`,
+        items: rows.filter(r => r.cat === cat).map(r => r.desc)
+      });
+    }
+  });
+
   // Compute health score
   const leakTotal = leaks.reduce((s,l)=>s+l.amount,0);
   const leakPct = leakTotal/total;
@@ -226,7 +246,6 @@ function runLeakDetector(rows){
                   score>=40?'Significant financial leakage detected':'Critical — money is flowing out fast';
 
   const totalSavings = leaks.reduce((s,l)=>s+l.saving,0);
-
   const recs = generateRecs(leaks, rows, total);
 
   return {rows, total, catTotals, leaks, score, grade, verdict, totalSavings, recs};
@@ -243,14 +262,18 @@ function generateRecs(leaks, rows, total){
   if(high.find(l=>l.name.includes('Food'))){
     recs.push({title:'Meal Prep 3×/Week',desc:'Cook 3 batch meals per week. This alone typically halves food delivery spend with minimal time investment.',saving:'Save up to ₹1,800/month'});
   }
-  if(med.find(l=>l.name.includes('Shopping'))){
-    recs.push({title:'48-Hour Purchase Rule',desc:'Add items to cart, wait 48 hours. 60% of impulse items get abandoned naturally — no willpower required.',saving:'Save up to ₹900/month'});
-  }
-  if(med.find(l=>l.name.includes('Transport'))){
+  if(high.find(l=>l.name.toLowerCase().includes('transport')) || med.find(l=>l.name.includes('Transport'))){
     recs.push({title:'Transport Optimization',desc:'Evaluate monthly metro/bus pass vs per-ride cost. Batch errands to reduce individual trips. Explore WFH negotiation.',saving:'Save up to ₹500/month'});
   }
+  if(med.find(l=>l.name.includes('Shopping')) || high.find(l=>l.name.includes('Shopping'))){
+    recs.push({title:'48-Hour Purchase Rule',desc:'Add items to cart, wait 48 hours. 60% of impulse items get abandoned naturally — no willpower required.',saving:'Save up to ₹900/month'});
+  }
+  // Add overspend-specific rec
+  high.filter(l=>l.name.includes('Overspend')).forEach(l=>{
+    recs.push({title:`Reduce ${l.name.replace(' Overspend','')} Costs`,desc:`Your ${l.name.replace(' Overspend','')} spending is disproportionately high. Set a fixed monthly budget for this category and track it weekly.`,saving:`Save up to ₹${Math.round(l.saving).toLocaleString('en-IN')}/month`});
+  });
   recs.push({title:'Zero-Based Budget Review',desc:'Assign every rupee a job at the start of the month. Studies show this alone reduces spending by 15% in the first month.',saving:'Ongoing control'});
-  recs.push({title:'Automate Savings First',desc:'Set up auto-transfer of 20% income to savings the moment salary arrives. What you don\'t see, you don\'t spend.',saving:'Builds long-term wealth'});
+  recs.push({title:'Automate Savings First',desc:"Set up auto-transfer of 20% income to savings the moment salary arrives. What you don't see, you don't spend.",saving:'Builds long-term wealth'});
 
   return recs;
 }
@@ -264,15 +287,12 @@ function renderResults(r){
   const gradeColor = r.grade==='A'?'var(--accent)':r.grade==='B'?'#64c8ff':r.grade==='C'?'var(--warn)':r.grade==='D'?'var(--accent2)':'var(--accent2)';
   const ringColor  = gradeColor;
   const circum = 2*Math.PI*54;
-  const dashOffset = circum*(1-r.score/100);
 
-  // Category bar data
   const catEntries = Object.entries(r.catTotals).sort((a,b)=>b[1]-a[1]);
   const maxCat = catEntries[0]?.[1]||1;
   const BAR_COLORS = ['var(--accent)','var(--accent3)','var(--warn)','var(--accent2)','#64c8ff','#f0a0ff','#80ffaa','#ffaa80'];
 
   con.innerHTML = `
-    <!-- Score -->
     <div class="section-tag">// Results</div>
     <h2 class="section-title" style="margin-bottom:32px">Your Financial <em>Health Report</em></h2>
 
@@ -308,7 +328,6 @@ function renderResults(r){
       </div>
     </div>
 
-    <!-- Leaks -->
     <div class="section-tag" style="margin-top:48px">// Detected Leaks</div>
     <h3 class="section-title" style="font-size:28px;margin-bottom:0">${r.leaks.length} expense leak${r.leaks.length!==1?'s':''} <em>identified</em></h3>
     ${r.leaks.length===0?'<p style="color:var(--muted);margin-top:16px">No significant leaks detected. Your spending looks well-controlled! 🎉</p>':''}
@@ -327,7 +346,6 @@ function renderResults(r){
       `).join('')}
     </div>
 
-    <!-- Chart -->
     <div class="chart-wrap" style="margin-top:40px">
       <div class="chart-title">Spending Breakdown by Category</div>
       <div class="bar-chart">
@@ -343,15 +361,11 @@ function renderResults(r){
       </div>
     </div>
 
-    <!-- AI Summary -->
     <div class="ai-summary" style="margin-top:32px">
       <div class="ai-badge">⬡ AI Analysis</div>
-      <div class="ai-text">
-        ${buildSummary(r)}
-      </div>
+      <div class="ai-text">${buildSummary(r)}</div>
     </div>
 
-    <!-- Recs -->
     <div class="section-tag" style="margin-top:48px">// Action Plan</div>
     <h3 class="section-title" style="font-size:28px;margin-bottom:24px">Your personalized <em>fix list</em></h3>
     <div class="rec-list">
@@ -368,16 +382,13 @@ function renderResults(r){
     </div>
   `;
 
-  // Animate ring
   setTimeout(()=>{
     const ring = document.getElementById('scoreRing');
     if(ring){ const c=2*Math.PI*54; ring.style.strokeDashoffset = c*(1-r.score/100); }
-    // Animate bars
     const catE = Object.entries(r.catTotals).sort((a,b)=>b[1]-a[1]);
-    const mx = catE[0]?.[1]||1;
     catE.forEach(([,amt],i)=>{
       const bar = document.getElementById('bar-'+i);
-      if(bar) setTimeout(()=>{ bar.style.width=(amt/mx*100)+'%'; },i*80);
+      if(bar) setTimeout(()=>{ bar.style.width=(amt/maxCat*100)+'%'; },i*80);
     });
   }, 100);
 }
@@ -386,7 +397,6 @@ function buildSummary(r){
   const highLeaks = r.leaks.filter(l=>l.severity==='high');
   const pct = Math.round(r.leaks.reduce((s,l)=>s+l.amount,0)/r.total*100);
   let txt = `Your total monthly expenditure is <strong>₹${r.total.toLocaleString('en-IN')}</strong>, of which approximately <strong>${pct}%</strong> flows through detected leak areas. `;
-
   if(highLeaks.length>0){
     txt += `The most critical leaks are in <strong>${highLeaks.map(l=>l.name).join(' and ')}</strong> — these alone account for ₹${highLeaks.reduce((s,l)=>s+l.amount,0).toLocaleString('en-IN')} and should be addressed first. `;
   }
@@ -405,7 +415,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'), 2500);
 }
 
-/* ── Init with 3 empty rows ── */
+/* ── Init with 3 default rows ── */
 addRow('Netflix','649','Subscriptions');
 addRow('Swiggy Dinner','480','Food');
 addRow('Electricity Bill','2100','Utilities');
