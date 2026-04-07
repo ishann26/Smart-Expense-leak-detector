@@ -4,38 +4,31 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>LeakSense</title>
-
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
-
 <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
 
 <div id="cursor"></div>
 <div id="cursor-ring"></div>
 
-<!-- Background -->
 <div class="mesh">
   <div class="mesh-blob mb1"></div>
   <div class="mesh-blob mb2"></div>
   <div class="mesh-blob mb3"></div>
 </div>
 
-<!-- Loading -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loader-ring"></div>
   <div class="loading-text">Detecting leaks…</div>
   <div class="loading-sub">running expense analysis engine</div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast">
   <div class="toast-dot"></div>
   <span id="toastMsg">Row added.</span>
 </div>
 
-<!-- NAV -->
 <nav>
   <div class="logo">
     <div class="logo-dot"></div>
@@ -49,7 +42,6 @@
   <button class="nav-cta" onclick="scrollToAnalyze()">Start For Free</button>
 </nav>
 
-<!-- HERO -->
 <section class="hero">
   <div class="hero-eyebrow">AI-powered expense intelligence</div>
   <h1 class="hero-title">Find where your<br/><em>money leaks</em></h1>
@@ -64,7 +56,6 @@
   </div>
 </section>
 
-<!-- STATS BAND -->
 <div class="stats-band">
   <div class="stats-inner">
     <div class="stat-item">
@@ -86,7 +77,6 @@
   </div>
 </div>
 
-<!-- HOW IT WORKS -->
 <section class="section" id="how">
   <div class="container">
     <div class="section-tag">// Process</div>
@@ -118,13 +108,11 @@
 
 <div class="divider"></div>
 
-<!-- ANALYZE SECTION -->
 <section class="section" id="analyze">
   <div class="container">
     <div class="section-tag">// Input</div>
     <h2 class="section-title">Enter your <em>expenses</em></h2>
 
-    <!-- Upload zone -->
     <div class="upload-zone" onclick="document.getElementById('fileInput').click()" id="uploadZone">
       <span class="upload-icon">📄</span>
       <div class="upload-title">Drop a CSV file here</div>
@@ -135,7 +123,6 @@
 
     <div style="text-align:center;color:var(--muted);padding:20px 0;font-size:12px;letter-spacing:.1em">— OR ENTER MANUALLY —</div>
 
-    <!-- Manual Table -->
     <div class="expense-table-wrap">
       <div class="expense-table-head">
         <span>Description</span>
@@ -156,7 +143,6 @@
   </div>
 </section>
 
-<!-- RESULTS -->
 <section class="section" id="results">
   <div class="container" id="resultsContainer"></div>
 </section>
@@ -164,7 +150,7 @@
 <div class="divider"></div>
 
 <footer>
-  <p>&nbsp;·&nbsp; LeakSense — Smart Expense Leak Detector &nbsp;·&nbsp;
+  <p>&nbsp;·&nbsp; LeakSense — Smart Expense Leak Detector &nbsp;·&nbsp;</p>
   <p style="margin-top:8px;font-size:11px">Your data never leaves your browser. Privacy first.</p>
 </footer>
 

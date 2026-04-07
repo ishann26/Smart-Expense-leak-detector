@@ -11,8 +11,8 @@
   "spend_clusters": [
     [
       "Subscriptions",
-      "Utilities",
-      "Food"
+      "Food",
+      "Utilities"
     ],
     [
       "Transport"
