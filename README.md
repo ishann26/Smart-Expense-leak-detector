@@ -1,2 +1,2 @@
 # Smart-Expense-leak-detector
-link to the website: https://moneyleakdetector.netlify.app/
+link to the website: https://smartleaksense.netlify.app/
