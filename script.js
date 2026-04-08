@@ -103,157 +103,44 @@ function handleCSV(input){
   reader.readAsText(file);
 }
 
-/* ── ANALYSIS ENGINE (Python logic ported to JS) ── */
-function analyzeExpenses(){
-  const rows = expenses.filter(e=>e.desc && e.amt>0);
-  if(rows.length<2){ showToast('Add at least 2 expenses!'); return; }
+/* ── ANALYSIS ENGINE (Connecting to Python AI) ── */
+async function analyzeExpenses() {
+  const rows = expenses.filter(e => e.desc && e.amt > 0);
+  
+  if(rows.length < 2) {
+    showToast("Please add at least 2 valid expenses.");
+    return;
+  }
 
-  document.getElementById('loadingOverlay').classList.add('active');
+  // Optional: show the loading overlay
+  const loader = document.getElementById('loadingOverlay');
+  if(loader) loader.classList.add('active');
 
-  setTimeout(()=>{
-    const result = runLeakDetector(rows);
-    renderResults(result);
-    document.getElementById('loadingOverlay').classList.remove('active');
-    document.getElementById('results').scrollIntoView({behavior:'smooth'});
-  }, 1800);
-}
-
-function runLeakDetector(rows){
-  const total = rows.reduce((s,e)=>s+e.amt,0);
-
-  // Category totals
-  const catTotals = {};
-  rows.forEach(e=>{
-    catTotals[e.cat] = (catTotals[e.cat]||0) + e.amt;
-  });
-
-  // Detect leaks
-  const leaks = [];
-
-  // 1. Subscription creep
-  const subs = rows.filter(e=>e.cat==='Subscriptions');
-  const subTotal = subs.reduce((s,e)=>s+e.amt,0);
-  if(subs.length>=3){
-    leaks.push({
-      name:'Subscription Creep',
-      severity:'high',
-      amount:subTotal,
-      saving:Math.round(subTotal*0.4),
-      tip:`You have ${subs.length} active subscriptions totalling ₹${subTotal.toLocaleString('en-IN')}. Many overlap in content — audit and cancel at least ${Math.floor(subs.length*0.4)} of them.`,
-      items:subs.map(s=>s.desc)
+  try {
+    const res = await fetch("http://localhost:5000/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        expenses: rows.map(e => ({ desc: e.desc, amount: e.amt, category: e.cat, date: e.date })),
+        rules: customRules
+      })
     });
+    
+    const result = await res.json();
+    
+    if(loader) loader.classList.remove('active');
+
+    if(result.error) {
+      showToast("Error: " + result.error);
+      return;
+    }
+
+    renderResults(result); 
+  } catch (error) {
+    if(loader) loader.classList.remove('active');
+    console.error(error);
+    showToast("Failed to connect to Server");
   }
-
-  // 2. Food delivery over-spend
-  const food = rows.filter(e=>e.cat==='Food');
-  const foodTotal = food.reduce((s,e)=>s+e.amt,0);
-  if(foodTotal > total * 0.22){
-    leaks.push({
-      name:'Food Delivery Overload',
-      severity:'high',
-      amount:foodTotal,
-      saving:Math.round(foodTotal*0.45),
-      tip:`Food expenses are ${Math.round(foodTotal/total*100)}% of your total spend — well above the recommended 15%. Cooking at home even 3 days/week could recover ₹${Math.round(foodTotal*0.45).toLocaleString('en-IN')}/month.`,
-      items:food.map(f=>f.desc)
-    });
-  }
-
-  // 3. Impulse shopping
-  const shop = rows.filter(e=>e.cat==='Shopping');
-  const shopTotal = shop.reduce((s,e)=>s+e.amt,0);
-  if(shopTotal > total * 0.15){
-    leaks.push({
-      name:'Impulse Purchases',
-      severity:'med',
-      amount:shopTotal,
-      saving:Math.round(shopTotal*0.5),
-      tip:`Shopping is ${Math.round(shopTotal/total*100)}% of spending. Apply a 48-hour rule before any purchase over ₹500 to cut impulse buys by ~50%.`,
-      items:shop.map(s=>s.desc)
-    });
-  }
-
-  // 4. Transport redundancy
-  const trans = rows.filter(e=>e.cat==='Transport');
-  const transTotal = trans.reduce((s,e)=>s+e.amt,0);
-  if(trans.length>=3 && transTotal>1000){
-    leaks.push({
-      name:'Transport Waste',
-      severity:'med',
-      amount:transTotal,
-      saving:Math.round(transTotal*0.3),
-      tip:`Multiple transport entries detected. Consider carpooling, monthly pass, or WFH days to reduce ₹${Math.round(transTotal*0.3).toLocaleString('en-IN')}/month.`,
-      items:trans.map(t=>t.desc)
-    });
-  }
-
-  // 5. Entertainment
-  const ent = rows.filter(e=>e.cat==='Entertainment');
-  const entTotal = ent.reduce((s,e)=>s+e.amt,0);
-  if(entTotal > total * 0.1){
-    leaks.push({
-      name:'Entertainment Excess',
-      severity:'low',
-      amount:entTotal,
-      saving:Math.round(entTotal*0.35),
-      tip:'Entertainment exceeds 10% of your budget. Look for free events, family-share plans, and early-bird discounts.',
-      items:ent.map(e=>e.desc)
-    });
-  }
-
-  // 6. Utility spike
-  const util = rows.filter(e=>e.cat==='Utilities');
-  const utilTotal = util.reduce((s,e)=>s+e.amt,0);
-  if(utilTotal > 3500){
-    leaks.push({
-      name:'Utility Overspend',
-      severity:'low',
-      amount:utilTotal,
-      saving:Math.round(utilTotal*0.2),
-      tip:'Utilities are high. Check for background AC/heating, vampire appliances, and consider a lower mobile plan tier.',
-      items:util.map(u=>u.desc)
-    });
-  }
-
-  // Compute health score
-  const leakTotal = leaks.reduce((s,l)=>s+l.amount,0);
-  const leakPct = leakTotal/total;
-  let score = Math.round(100 - leakPct*120);
-  score = Math.max(5, Math.min(100, score));
-
-  const grade = score>=85?'A':score>=70?'B':score>=55?'C':score>=40?'D':'F';
-  const verdict = score>=85?'Excellent control — minimal leaks detected':
-                  score>=70?'Good shape, but a few leaks worth fixing':
-                  score>=55?'Several leaks draining your budget':
-                  score>=40?'Significant financial leakage detected':'Critical — money is flowing out fast';
-
-  const totalSavings = leaks.reduce((s,l)=>s+l.saving,0);
-
-  const recs = generateRecs(leaks, rows, total);
-
-  return {rows, total, catTotals, leaks, score, grade, verdict, totalSavings, recs};
-}
-
-function generateRecs(leaks, rows, total){
-  const recs = [];
-  const high = leaks.filter(l=>l.severity==='high');
-  const med  = leaks.filter(l=>l.severity==='med');
-
-  if(high.find(l=>l.name.includes('Subscription'))){
-    recs.push({title:'Subscription Audit Sprint',desc:'List every subscription. Cancel anything unused for 30+ days. Merge overlapping services (e.g. one streaming platform instead of three).',saving:'Save up to ₹1,200/month'});
-  }
-  if(high.find(l=>l.name.includes('Food'))){
-    recs.push({title:'Meal Prep 3×/Week',desc:'Cook 3 batch meals per week. This alone typically halves food delivery spend with minimal time investment.',saving:'Save up to ₹1,800/month'});
-  }
-  if(med.find(l=>l.name.includes('Shopping'))){
-    recs.push({title:'48-Hour Purchase Rule',desc:'Add items to cart, wait 48 hours. 60% of impulse items get abandoned naturally — no willpower required.',saving:'Save up to ₹900/month'});
-  }
-  if(med.find(l=>l.name.includes('Transport'))){
-    recs.push({title:'Transport Optimization',desc:'Evaluate monthly metro/bus pass vs per-ride cost. Batch errands to reduce individual trips. Explore WFH negotiation.',saving:'Save up to ₹500/month'});
-  }
-  recs.push({title:'Zero-Based Budget Review',desc:'Assign every rupee a job at the start of the month. Studies show this alone reduces spending by 15% in the first month.',saving:'Ongoing control'});
-  recs.push({title:'Automate Savings First',desc:'Set up auto-transfer of 20% income to savings the moment salary arrives. What you don\'t see, you don\'t spend.',saving:'Builds long-term wealth'});
-
-  return recs;
 }
 
 /* ── RENDER ── */
@@ -262,18 +149,23 @@ function renderResults(r){
   const con = document.getElementById('resultsContainer');
   el.style.display = 'block'; el.classList.add('visible');
 
-  const gradeColor = r.grade==='A'?'var(--accent)':r.grade==='B'?'#64c8ff':r.grade==='C'?'var(--warn)':r.grade==='D'?'var(--accent2)':'var(--accent2)';
+  // The Python API returns health data slightly differently than the old JS
+  const score = r.health.score;
+  const grade = r.health.grade;
+  const verdict = r.health.verdict;
+  const totalSavings = r.health.total_savings;
+
+  const gradeColor = grade==='A'?'var(--accent)':grade==='B'?'#64c8ff':grade==='C'?'var(--warn)':grade==='D'?'var(--accent2)':'var(--accent2)';
   const ringColor  = gradeColor;
   const circum = 2*Math.PI*54;
-  const dashOffset = circum*(1-r.score/100);
+  const dashOffset = circum*(1-score/100);
 
   // Category bar data
-  const catEntries = Object.entries(r.catTotals).sort((a,b)=>b[1]-a[1]);
+  const catEntries = Object.entries(r.category_totals).sort((a,b)=>b[1]-a[1]);
   const maxCat = catEntries[0]?.[1]||1;
   const BAR_COLORS = ['var(--accent)','var(--accent3)','var(--warn)','var(--accent2)','#64c8ff','#f0a0ff','#80ffaa','#ffaa80'];
 
   con.innerHTML = `
-    <!-- Score -->
     <div class="section-tag">// Results</div>
     <h2 class="section-title" style="margin-bottom:32px">Your Financial <em>Health Report</em></h2>
 
@@ -285,13 +177,13 @@ function renderResults(r){
             stroke="${ringColor}"
             stroke-dasharray="${circum}"
             stroke-dashoffset="${circum}"/>
-          <text x="60" y="56" text-anchor="middle" class="score-center" fill="${ringColor}" font-family="Syne,sans-serif" font-weight="800" font-size="28">${r.score}</text>
+          <text x="60" y="56" text-anchor="middle" class="score-center" fill="${ringColor}" font-family="Syne,sans-serif" font-weight="800" font-size="28">${score}</text>
           <text x="60" y="70" text-anchor="middle" class="score-center-label" fill="#5a6070" font-family="DM Mono,monospace" font-size="9">/100</text>
         </svg>
       </div>
       <div class="score-info">
-        <div class="score-grade" style="color:${gradeColor}">${r.grade}</div>
-        <div class="score-verdict">${r.verdict}</div>
+        <div class="score-grade" style="color:${gradeColor}">${grade}</div>
+        <div class="score-verdict">${verdict}</div>
         <div class="score-meta">
           <div class="score-meta-item">
             <div class="label">Total Spend</div>
@@ -303,13 +195,12 @@ function renderResults(r){
           </div>
           <div class="score-meta-item">
             <div class="label">Potential Savings</div>
-            <div class="value" style="color:var(--accent)">₹${r.totalSavings.toLocaleString('en-IN')}</div>
+            <div class="value" style="color:var(--accent)">₹${totalSavings.toLocaleString('en-IN')}</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Leaks -->
     <div class="section-tag" style="margin-top:48px">// Detected Leaks</div>
     <h3 class="section-title" style="font-size:28px;margin-bottom:0">${r.leaks.length} expense leak${r.leaks.length!==1?'s':''} <em>identified</em></h3>
     ${r.leaks.length===0?'<p style="color:var(--muted);margin-top:16px">No significant leaks detected. Your spending looks well-controlled! 🎉</p>':''}
@@ -328,7 +219,6 @@ function renderResults(r){
       `).join('')}
     </div>
 
-    <!-- Chart -->
     <div class="chart-wrap" style="margin-top:40px">
       <div class="chart-title">Spending Breakdown by Category</div>
       <div class="bar-chart">
@@ -344,7 +234,6 @@ function renderResults(r){
       </div>
     </div>
 
-    <!-- AI Summary -->
     <div class="ai-summary" style="margin-top:32px">
       <div class="ai-badge">⬡ AI Analysis</div>
       <div class="ai-text">
@@ -352,11 +241,10 @@ function renderResults(r){
       </div>
     </div>
 
-    <!-- Recs -->
     <div class="section-tag" style="margin-top:48px">// Action Plan</div>
     <h3 class="section-title" style="font-size:28px;margin-bottom:24px">Your personalized <em>fix list</em></h3>
     <div class="rec-list">
-      ${r.recs.map((rec,i)=>`
+      ${r.recommendations.map((rec,i)=>`
         <div class="rec-item" style="animation-delay:${i*0.1}s">
           <div class="rec-num">${String(i+1).padStart(2,'0')}</div>
           <div class="rec-body">
@@ -372,15 +260,18 @@ function renderResults(r){
   // Animate ring
   setTimeout(()=>{
     const ring = document.getElementById('scoreRing');
-    if(ring){ const c=2*Math.PI*54; ring.style.strokeDashoffset = c*(1-r.score/100); }
+    if(ring){ const c=2*Math.PI*54; ring.style.strokeDashoffset = c*(1-score/100); }
     // Animate bars
-    const catE = Object.entries(r.catTotals).sort((a,b)=>b[1]-a[1]);
+    const catE = Object.entries(r.category_totals).sort((a,b)=>b[1]-a[1]);
     const mx = catE[0]?.[1]||1;
     catE.forEach(([,amt],i)=>{
       const bar = document.getElementById('bar-'+i);
       if(bar) setTimeout(()=>{ bar.style.width=(amt/mx*100)+'%'; },i*80);
     });
   }, 100);
+  
+  // Scroll to results
+  document.getElementById('results').scrollIntoView({behavior: 'smooth'});
 }
 
 function buildSummary(r){
@@ -391,8 +282,8 @@ function buildSummary(r){
   if(highLeaks.length>0){
     txt += `The most critical leaks are in <strong>${highLeaks.map(l=>l.name).join(' and ')}</strong> — these alone account for ₹${highLeaks.reduce((s,l)=>s+l.amount,0).toLocaleString('en-IN')} and should be addressed first. `;
   }
-  if(r.totalSavings>0){
-    txt += `By implementing the recommendations below, you could realistically recover <strong>₹${r.totalSavings.toLocaleString('en-IN')}/month</strong> — that's <strong>₹${(r.totalSavings*12).toLocaleString('en-IN')} per year</strong> redirected to savings or investments. `;
+  if(r.health.total_savings>0){
+    txt += `By implementing the recommendations below, you could realistically recover <strong>₹${r.health.total_savings.toLocaleString('en-IN')}/month</strong> — that's <strong>₹${(r.health.total_savings*12).toLocaleString('en-IN')} per year</strong> redirected to savings or investments. `;
   }
   txt += `Focus on the high-severity items first, then revisit this analysis in 30 days to track progress.`;
   return txt;
@@ -410,3 +301,97 @@ function showToast(msg){
 addRow('Netflix','649','Subscriptions');
 addRow('Swiggy Dinner','480','Food');
 addRow('Electricity Bill','2100','Utilities');
+
+/* ── Custom Rules Engine ── */
+let customRules = [];
+
+function addCustomRule() {
+  const name = document.getElementById('ruleName').value;
+  const cat = document.getElementById('ruleCat').value;
+  const pct = parseFloat(document.getElementById('rulePct').value);
+  const min = parseFloat(document.getElementById('ruleMin').value);
+  const sev = document.getElementById('ruleSev').value;
+
+  if(!name || !pct || !min) {
+    showToast("Please fill in Rule Name, Max %, and Min Amount");
+    return;
+  }
+
+  customRules.push({ name, category: cat, max_pct: pct, min_amount: min, severity: sev });
+  
+  // Clear inputs
+  document.getElementById('ruleName').value = '';
+  document.getElementById('rulePct').value = '';
+  document.getElementById('ruleMin').value = '';
+
+  renderRules();
+  showToast("Custom rule added!");
+}
+
+function removeRule(index) {
+  customRules.splice(index, 1);
+  renderRules();
+}
+
+function renderRules() {
+  const container = document.getElementById('activeRulesList');
+  if(customRules.length === 0) {
+    container.innerHTML = `<div style="color:var(--muted); font-size:12px; margin-top:16px;">Using AI Default Rules. Add a rule above to override.</div>`;
+    return;
+  }
+
+  container.innerHTML = customRules.map((r, i) => `
+    <div class="active-rule-item">
+      <div><strong>${r.name}</strong> • ${r.category} > ${r.max_pct}% AND > ₹${r.min_amount} (${r.severity})</div>
+      <button onclick="removeRule(${i})" style="background:none; border:none; color:var(--accent2); cursor:pointer;">✕</button>
+    </div>
+  `).join('');
+}
+
+// Initialize empty rules display
+renderRules();
+
+function toggleDropdown() {
+  document.getElementById('dropdownOptions').classList.toggle('show');
+}
+
+function selectSeverity(value, text) {
+  // Update the hidden input value
+  document.getElementById('ruleSev').value = value;
+  // Update the displayed text
+  document.querySelector('.dropdown-selected').innerText = text;
+  // Close the dropdown
+  document.getElementById('dropdownOptions').classList.remove('show');
+}
+
+// Close dropdown if clicked outside
+window.onclick = function(event) {
+  if (!event.target.matches('.dropdown-selected')) {
+    const dropdowns = document.getElementsByClassName("dropdown-options");
+    for (let i = 0; i < dropdowns.length; i++) {
+      dropdowns[i].classList.remove('show');
+    }
+  }
+}
+/* ── Custom Dropdown Logic ── */
+function toggleDropdown(menuId, event) {
+  event.stopPropagation(); // Prevent immediate closing
+  // Close all other dropdowns first
+  document.querySelectorAll('.dropdown-options').forEach(menu => {
+    if (menu.id !== menuId) menu.classList.remove('show');
+  });
+  // Toggle the clicked one
+  document.getElementById(menuId).classList.toggle('show');
+}
+
+function setOption(inputId, displayId, value, text = null) {
+  document.getElementById(inputId).value = value;
+  document.getElementById(displayId).innerText = text || value;
+}
+
+// Close dropdowns if the user clicks anywhere else on the screen
+window.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-options').forEach(menu => {
+    menu.classList.remove('show');
+  });
+});

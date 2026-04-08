@@ -1,173 +1,209 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>LeakSense</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
-
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeakSense</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Instrument+Serif:ital@0;1&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
 
-<div id="cursor"></div>
-<div id="cursor-ring"></div>
+  <div id="cursor"></div>
+  <div id="cursor-ring"></div>
 
-<!-- Background -->
-<div class="mesh">
-  <div class="mesh-blob mb1"></div>
-  <div class="mesh-blob mb2"></div>
-  <div class="mesh-blob mb3"></div>
-</div>
-
-<!-- Loading -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="loader-ring"></div>
-  <div class="loading-text">Detecting leaks…</div>
-  <div class="loading-sub">running expense analysis engine</div>
-</div>
-
-<!-- Toast -->
-<div class="toast" id="toast">
-  <div class="toast-dot"></div>
-  <span id="toastMsg">Row added.</span>
-</div>
-
-<!-- NAV -->
-<nav>
-  <div class="logo">
-    <div class="logo-dot"></div>
-    LeakSense
+  <div class="mesh">
+    <div class="mesh-blob mb1"></div>
+    <div class="mesh-blob mb2"></div>
+    <div class="mesh-blob mb3"></div>
   </div>
-  <div class="nav-links">
-    <a href="#how">How it works</a>
-    <a href="#analyze">Analyze</a>
-    <a href="#results">Results</a>
-  </div>
-  <button class="nav-cta" onclick="scrollToAnalyze()">Start For Free</button>
-</nav>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-eyebrow">AI-powered expense intelligence</div>
-  <h1 class="hero-title">Find where your<br/><em>money leaks</em></h1>
-  <p class="hero-sub">Upload your expenses or enter them manually. Our AI engine finds hidden patterns, wasteful subscriptions, and unnecessary spending — instantly.</p>
-  <div class="hero-actions">
-    <button class="btn-primary" onclick="scrollToAnalyze()">Detect My Leaks</button>
-    <button class="btn-ghost" onclick="loadDemo()">Try Demo Data</button>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loader-ring"></div>
+    <div class="loading-text">Detecting leaks…</div>
+    <div class="loading-sub">running expense analysis engine</div>
   </div>
-  <div class="hero-scroll">
-    <div class="scroll-line"></div>
-    SCROLL
-  </div>
-</section>
 
-<!-- STATS BAND -->
-<div class="stats-band">
-  <div class="stats-inner">
-    <div class="stat-item">
-      <div class="stat-num">₹4,200</div>
-      <div class="stat-label">Avg. monthly savings found</div>
+  <div class="toast" id="toast">
+    <div class="toast-dot"></div>
+    <span id="toastMsg">Row added.</span>
+  </div>
+
+  <nav>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      LeakSense
     </div>
-    <div class="stat-item">
-      <div class="stat-num">12s</div>
-      <div class="stat-label">Time to full analysis</div>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#analyze">Analyze</a>
+      <a href="#results">Results</a>
     </div>
-    <div class="stat-item">
-      <div class="stat-num">9</div>
-      <div class="stat-label">Leak categories detected</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">100%</div>
-      <div class="stat-label">Private — runs locally</div>
-    </div>
-  </div>
-</div>
+    <button class="nav-cta" onclick="scrollToAnalyze()">Start For Free</button>
+  </nav>
 
-<!-- HOW IT WORKS -->
-<section class="section" id="how">
-  <div class="container">
-    <div class="section-tag">// Process</div>
-    <h2 class="section-title">Three steps to <em>financial clarity</em></h2>
-    <div class="how-grid">
-      <div class="how-card">
-        <div class="how-num">01</div>
-        <div class="how-title">Input Expenses</div>
-        <div class="how-desc">Paste your transactions manually or upload a CSV. We accept any format — bank exports, app exports, hand-typed lists.</div>
+  <section class="hero">
+    <div class="hero-eyebrow">AI-powered expense intelligence</div>
+    <h1 class="hero-title">Find where your<br /><em>money leaks</em></h1>
+    <p class="hero-sub">Upload your expenses or enter them manually. Our AI engine finds hidden patterns, wasteful
+      subscriptions, and unnecessary spending — instantly.</p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="scrollToAnalyze()">Detect My Leaks</button>
+      <button class="btn-ghost" onclick="loadDemo()">Try Demo Data</button>
+    </div>
+    <div class="hero-scroll">
+      <div class="scroll-line"></div>
+      SCROLL
+    </div>
+  </section>
+
+  <div class="stats-band">
+    <div class="stats-inner">
+      <div class="stat-item">
+        <div class="stat-num">₹4,200</div>
+        <div class="stat-label">Avg. monthly savings found</div>
       </div>
-      <div class="how-card">
-        <div class="how-num">02</div>
-        <div class="how-title">AI Detection Engine</div>
-        <div class="how-desc">Our pattern recognition engine categorizes every expense, identifies duplicates, detects subscription creep, and flags outliers.</div>
+      <div class="stat-item">
+        <div class="stat-num">12 s</div>
+        <div class="stat-label">Time to full analysis</div>
       </div>
-      <div class="how-card">
-        <div class="how-num">03</div>
-        <div class="how-title">Actionable Report</div>
-        <div class="how-desc">Receive a prioritized list of leaks with specific saving recommendations and an overall financial health score.</div>
+      <div class="stat-item">
+        <div class="stat-num">9</div>
+        <div class="stat-label">Leak categories detected</div>
       </div>
-      <div class="how-card">
-        <div class="how-num">04</div>
-        <div class="how-title">Take Action</div>
-        <div class="how-desc">Each recommendation links to cancellation guides or cheaper alternatives. Start saving the same day.</div>
+      <div class="stat-item">
+        <div class="stat-num">100%</div>
+        <div class="stat-label">Private — runs locally</div>
       </div>
     </div>
   </div>
-</section>
 
-<div class="divider"></div>
-
-<!-- ANALYZE SECTION -->
-<section class="section" id="analyze">
-  <div class="container">
-    <div class="section-tag">// Input</div>
-    <h2 class="section-title">Enter your <em>expenses</em></h2>
-
-    <!-- Upload zone -->
-    <div class="upload-zone" onclick="document.getElementById('fileInput').click()" id="uploadZone">
-      <span class="upload-icon">📄</span>
-      <div class="upload-title">Drop a CSV file here</div>
-      <div class="upload-sub">or click to browse — columns: Description, Amount, Category, Date</div>
-      <label class="upload-btn" for="fileInput">Choose File</label>
-      <input type="file" id="fileInput" accept=".csv" onchange="handleCSV(this)"/>
-    </div>
-
-    <div style="text-align:center;color:var(--muted);padding:20px 0;font-size:12px;letter-spacing:.1em">— OR ENTER MANUALLY —</div>
-
-    <!-- Manual Table -->
-    <div class="expense-table-wrap">
-      <div class="expense-table-head">
-        <span>Description</span>
-        <span>Amount (₹)</span>
-        <span class="col-cat">Category</span>
-        <span class="col-date">Date</span>
-        <span>Del</span>
+  <section class="section" id="how">
+    <div class="container">
+      <div class="section-tag">// Process</div>
+      <h2 class="section-title">Three steps to <em>financial clarity</em></h2>
+      <div class="how-grid">
+        <div class="how-card">
+          <div class="how-num">01</div>
+          <div class="how-title">Input Expenses</div>
+          <div class="how-desc">Paste your transactions manually or upload a CSV. We accept any format — bank exports,
+            app exports, hand-typed lists.</div>
+        </div>
+        <div class="how-card">
+          <div class="how-num">02</div>
+          <div class="how-title">AI Detection Engine</div>
+          <div class="how-desc">Our pattern recognition engine categorizes every expense, identifies duplicates, detects
+            subscription creep, and flags outliers.</div>
+        </div>
+        <div class="how-card">
+          <div class="how-num">03</div>
+          <div class="how-title">Actionable Report</div>
+          <div class="how-desc">Receive a prioritized list of leaks with specific saving recommendations and an overall
+            financial health score.</div>
+        </div>
+        <div class="how-card">
+          <div class="how-num">04</div>
+          <div class="how-title">Take Action</div>
+          <div class="how-desc">Each recommendation links to cancellation guides or cheaper alternatives. Start saving
+            the same day.</div>
+        </div>
       </div>
-      <div id="expenseRows"></div>
-      <button class="add-row-btn" onclick="addRow()">+ Add Expense</button>
     </div>
+  </section>
 
-    <div class="analyze-wrap">
-      <button class="analyze-btn" onclick="analyzeExpenses()">
-        🔍 &nbsp; Detect Expense Leaks
-      </button>
+  <div class="divider"></div>
+
+  <section class="section" id="analyze">
+    <div class="container">
+      <div class="section-tag">// Input</div>
+      <h2 class="section-title">Enter your <em>expenses</em></h2>
+
+      <div class="upload-zone" onclick="document.getElementById('fileInput').click()" id="uploadZone">
+        <span class="upload-icon">📄</span>
+        <div class="upload-title">Drop a CSV file here</div>
+        <div class="upload-sub">or click to browse — columns: Description, Amount, Category, Date</div>
+        <label class="upload-btn" for="fileInput">Choose File</label>
+        <input type="file" id="fileInput" accept=".csv" onchange="handleCSV(this)" />
+      </div>
+
+      <div style="text-align:center;color:var(--muted);padding:20px 0;font-size:12px;letter-spacing:.1em">— OR ENTER
+        MANUALLY —</div>
+
+      <div class="expense-table-wrap">
+        <div class="expense-table-head">
+          <span>Description</span>
+          <span>Amount (₹)</span>
+          <span class="col-cat">Category</span>
+          <span class="col-date">Date</span>
+          <span>Del</span>
+        </div>
+        <div id="expenseRows"></div>
+        <button class="add-row-btn" onclick="addRow()">+ Add Expense</button>
+      </div>
+      <div class="rules-engine-wrap" style="margin-top:40px;">
+        <div class="section-tag">// Advanced</div>
+        <h3 class="section-title" style="font-size:24px; margin-bottom: 16px;">Custom Constraints</h3>
+        <p style="color:var(--muted); font-size:13px; margin-bottom:24px;">Override the AI's default rules with your own
+          personalized budget limits.</p>
+
+        <div class="rule-builder">
+        <input type="text" id="ruleName" placeholder="Rule Name (e.g. strict food)"/>
+        
+        <div class="custom-dropdown" onclick="toggleDropdown('catOptions', event)">
+          <div class="dropdown-selected" id="catDisplay">Food</div>
+          <div class="dropdown-options" id="catOptions">
+            <div onclick="setOption('ruleCat', 'catDisplay', 'Food')">Food</div>
+            <div onclick="setOption('ruleCat', 'catDisplay', 'Subscriptions')">Subscriptions</div>
+            <div onclick="setOption('ruleCat', 'catDisplay', 'Shopping')">Shopping</div>
+            <div onclick="setOption('ruleCat', 'catDisplay', 'Transport')">Transport</div>
+            <div onclick="setOption('ruleCat', 'catDisplay', 'Utilities')">Utilities</div>
+            <div onclick="setOption('ruleCat', 'catDisplay', 'Entertainment')">Entertainment</div>
+          </div>
+          <input type="hidden" id="ruleCat" value="Food">
+        </div>
+
+        <input type="number" id="rulePct" placeholder="Max % (e.g. 15)"/>
+        <input type="number" id="ruleMin" placeholder="Min Amount ₹ (e.g. 500)"/>
+        
+        <div class="custom-dropdown" onclick="toggleDropdown('sevOptions', event)">
+          <div class="dropdown-selected" id="sevDisplay">High Severity</div>
+          <div class="dropdown-options" id="sevOptions">
+            <div onclick="setOption('ruleSev', 'sevDisplay', 'high', 'High Severity')">High Severity</div>
+            <div onclick="setOption('ruleSev', 'sevDisplay', 'med', 'Medium Severity')">Medium Severity</div>
+            <div onclick="setOption('ruleSev', 'sevDisplay', 'low', 'Low Severity')">Low Severity</div>
+          </div>
+          <input type="hidden" id="ruleSev" value="high">
+        </div>
+
+        <button class="add-rule-btn" onclick="addCustomRule()">+ Add Rule</button>
+      </div>
+
+        <div id="activeRulesList" class="active-rules-list"></div>
+      </div>
+      <div class="analyze-wrap">
+        <button class="analyze-btn" onclick="analyzeExpenses()">
+          🔍 &nbsp; Detect Expense Leaks
+        </button>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- RESULTS -->
-<section class="section" id="results">
-  <div class="container" id="resultsContainer"></div>
-</section>
+  <section class="section" id="results">
+    <div class="container" id="resultsContainer"></div>
+  </section>
 
-<div class="divider"></div>
+  <div class="divider"></div>
 
-<footer>
-  <p>&nbsp;·&nbsp; LeakSense — Smart Expense Leak Detector &nbsp;·&nbsp;
-  <p style="margin-top:8px;font-size:11px">Your data never leaves your browser. Privacy first.</p>
-</footer>
+  <footer>
+    <p>&nbsp;·&nbsp; LeakSense — Smart Expense Leak Detector &nbsp;·&nbsp;</p>
+    <p style="margin-top:8px;font-size:11px">Your data never leaves your browser. Privacy first.</p>
+  </footer>
 
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
+
 </html>
